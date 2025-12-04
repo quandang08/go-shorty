@@ -18,7 +18,19 @@ GoShorty được xây dựng như một **minimal but correct backend system**:
 gọn nhẹ, ổn định, dễ bảo trì, và hoạt động tốt ngay cả khi load tăng cao.
 
 ## 2. System Architecture
+<img width="1022" height="408" alt="Screenshot 2025-12-04 at 10 00 55" src="https://github.com/user-attachments/assets/d06e30db-fe4b-4977-8535-b6be87c0ba9c" />
+
 ## 3. API Flow
+
+#Create Short URL Flow
+<img width="767" height="282" alt="Screenshot 2025-12-04 at 18 35 23" src="https://github.com/user-attachments/assets/a84ed7cf-3071-42b3-8a12-774a651c6978" />
+
+#Redirect Flow
+<img width="784" height="430" alt="Screenshot 2025-12-04 at 18 36 53" src="https://github.com/user-attachments/assets/e394c17d-48af-4dcf-a1b5-6eacac9835d8" />
+
+
 ## 4. Database Schema
+<img width="242" height="308" alt="Screenshot 2025-12-04 at 18 30 30" src="https://github.com/user-attachments/assets/f7248540-ef65-420b-8cf9-720de2a55ea6" />
+
 ## 5. Implementation Overview
 ## 6. Limitations & Future Improvements
