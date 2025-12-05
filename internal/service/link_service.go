@@ -25,11 +25,6 @@ type linkServiceImpl struct {
 	Cfg  *config.Config
 }
 
-func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 // NewLinkService initializes and returns a LinkService instance.
 func NewLinkService(repo repository.LinkRepository, cfg *config.Config) LinkService {
 	return &linkServiceImpl{
@@ -85,4 +80,28 @@ func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkRespon
 		CreatedAt:   link.CreatedAt,
 		ShortURL:    shortURL + link.ShortCode,
 	}, nil
+}
+
+// GetOriginalURL retrieves the original URL mapped to a short code
+// and increments the click counter.
+func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
+	if shortCode == "" {
+		return "", ErrLinkNotFound
+	}
+
+	// Lookup link
+	link, err := s.Repo.FindByShortCode(shortCode)
+	if err != nil {
+		return "", ErrServiceUnavailable
+	}
+	if link == nil {
+		return "", ErrLinkNotFound
+	}
+
+	// Increment click count (repository should ensure atomic update)
+	if err := s.Repo.IncrementClicks(shortCode); err != nil {
+		return "", ErrServiceUnavailable
+	}
+
+	return link.OriginalURL, nil
 }
