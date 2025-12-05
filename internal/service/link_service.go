@@ -14,6 +14,8 @@ import (
 type LinkService interface {
 	CreateShortLink(originalURL string) (*model.LinkResponse, error)
 	GetOriginalURL(shortCode string) (string, error)
+	GetLinkDetails(shortCode string) (*model.LinkResponse, error) // XEM CHI TIẾT
+	ListAllLinks() ([]model.LinkResponse, error)                  // LIỆT KÊ
 }
 
 type linkServiceImpl struct {
@@ -95,4 +97,43 @@ func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
 	}
 
 	return link.OriginalURL, nil
+}
+
+// GetLinkDetails Implement GetLinkDetails (chỉ gọi FindByShortCode, không tăng click)
+func (s *linkServiceImpl) GetLinkDetails(shortCode string) (*model.LinkResponse, error) {
+	link, err := s.Repo.FindByShortCode(shortCode)
+	if err != nil {
+		return nil, ErrServiceUnavailable
+	}
+	if link == nil {
+		return nil, ErrLinkNotFound
+	}
+	// Map Entity sang Response DTO (Sử dụng code này để tránh trùng lặp)
+	return &model.LinkResponse{
+		ShortCode:   link.ShortCode,
+		OriginalURL: link.OriginalURL,
+		ClicksCount: link.ClicksCount,
+		CreatedAt:   link.CreatedAt,
+		ShortURL:    s.Cfg.ShortDomain + link.ShortCode,
+	}, nil
+}
+
+func (s *linkServiceImpl) ListAllLinks() ([]model.LinkResponse, error) {
+	links, err := s.Repo.FindAll()
+	if err != nil {
+		return nil, ErrServiceUnavailable
+	}
+	// ... (logic map links sang responses DTO)
+	var responses []model.LinkResponse
+	shortDomain := s.Cfg.ShortDomain
+	for _, link := range links {
+		responses = append(responses, model.LinkResponse{
+			ShortCode:   link.ShortCode,
+			OriginalURL: link.OriginalURL,
+			ClicksCount: link.ClicksCount,
+			CreatedAt:   link.CreatedAt,
+			ShortURL:    shortDomain + link.ShortCode,
+		})
+	}
+	return responses, nil
 }
