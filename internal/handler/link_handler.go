@@ -53,10 +53,32 @@ func (h *LinkHandler) CreateLink(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// Redirect handles GET /:short_code
-// It looks up the original URL and issues an HTTP redirect.
+// Redirect handles GET /:short_code.
+// It resolves the short code, increments the click count,
+// and issues an HTTP redirect to the original URL.
 func (h *LinkHandler) Redirect(c *gin.Context) {
-	// Logic sẽ được bổ sung
+	// Extract short code from URL path
+	shortCode := c.Param("short_code")
+
+	// Edge case: Missing short code (user accesses "/")
+	if shortCode == "" {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	// Resolve original URL via Service Layer
+	originalURL, err := h.Service.GetOriginalURL(shortCode)
+	if err != nil {
+		if err == service.ErrLinkNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Short link not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	// Perform redirect (302 Found is recommended for shorteners)
+	c.Redirect(http.StatusFound, originalURL)
 }
 
 // GetLinkInfo handles GET /api/v1/links/:id
