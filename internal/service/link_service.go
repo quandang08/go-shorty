@@ -2,23 +2,35 @@ package service
 
 import (
 	"errors"
+	"net/url"
 
 	"github.com/quandang08/go-shorty/config"
 	"github.com/quandang08/go-shorty/internal/model"
 	"github.com/quandang08/go-shorty/internal/repository"
+	"github.com/quandang08/go-shorty/internal/util"
 )
 
 // LinkService defines the business logic for creating and resolving short URLs.
 type LinkService interface {
+	// CreateShortLink generates a short code for the given URL and returns link metadata.
 	CreateShortLink(originalURL string) (*model.LinkResponse, error)
+
+	// GetOriginalURL returns the long URL mapped to the given short code.
 	GetOriginalURL(shortCode string) (string, error)
 }
 
+// linkServiceImpl implements LinkService.
 type linkServiceImpl struct {
 	Repo repository.LinkRepository
 	Cfg  *config.Config
 }
 
+func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+// NewLinkService initializes and returns a LinkService instance.
 func NewLinkService(repo repository.LinkRepository, cfg *config.Config) LinkService {
 	return &linkServiceImpl{
 		Repo: repo,
@@ -33,3 +45,44 @@ var (
 	ErrConflict           = errors.New("short code conflict occurred, please retry")
 	ErrServiceUnavailable = errors.New("internal service error")
 )
+
+// CreateShortLink validates the URL, generates a Base62 short code from the DB ID,
+// persists it, and returns the full response payload.
+func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkResponse, error) {
+	// Validate input
+	if originalURL == "" {
+		return nil, ErrInvalidURL
+	}
+	if _, err := url.ParseRequestURI(originalURL); err != nil {
+		return nil, ErrInvalidURL
+	}
+
+	// Insert initial record to obtain auto-increment ID
+	link := &model.Link{OriginalURL: originalURL}
+	if err := s.Repo.Save(link); err != nil {
+		return nil, ErrServiceUnavailable
+	}
+
+	// Generate short code from ID
+	shortCode := util.EncodeToBase62(link.ID)
+	link.ShortCode = shortCode
+
+	// Save short code back into database
+	if err := s.Repo.Save(link); err != nil {
+		return nil, ErrServiceUnavailable
+	}
+
+	// Build short URL
+	shortURL := s.Cfg.ShortDomain
+	if len(shortURL) > 0 && shortURL[len(shortURL)-1] != '/' {
+		shortURL += "/"
+	}
+
+	return &model.LinkResponse{
+		ShortCode:   link.ShortCode,
+		OriginalURL: link.OriginalURL,
+		ClicksCount: link.ClicksCount,
+		CreatedAt:   link.CreatedAt,
+		ShortURL:    shortURL + link.ShortCode,
+	}, nil
+}
