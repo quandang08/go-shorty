@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,63 +14,47 @@ type LinkHandler struct {
 	Service service.LinkService
 }
 
-// NewLinkHandler returns a new instance of LinkHandler.
+// NewLinkHandler creates a new LinkHandler instance.
 func NewLinkHandler(svc service.LinkService) *LinkHandler {
 	return &LinkHandler{Service: svc}
 }
 
-// CreateLink handles POST /api/v1/links
-// It validates the request body, delegates business logic to the service layer,
-// and returns the shortened URL metadata.
+// CreateLink handles POST /api/v1/links.
+// It validates the request, calls the service to create a short link,
+// and returns the result or an error response.
 func (h *LinkHandler) CreateLink(c *gin.Context) {
 	var req model.CreateLinkRequest
-
-	// Bind and validate request body
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid input format or missing fields",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input format or missing fields"})
 		return
 	}
 
-	// Create short link using service layer
 	response, err := h.Service.CreateShortLink(req.OriginalURL)
 	if err != nil {
 		if err == service.ErrInvalidURL {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "The provided URL is invalid or malformed.",
-			})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "The provided URL is invalid or malformed."})
 			return
 		}
-
-		// Unexpected internal error
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Internal server error occurred.",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error occurred."})
 		return
 	}
 
-	// Success response
 	c.JSON(http.StatusCreated, response)
 }
 
 // Redirect handles GET /:short_code.
-// It resolves the short code, increments the click count,
-// and issues an HTTP redirect to the original URL.
+// It resolves the short code, increments click count,
+// and issues a 302 redirect to the original URL.
 func (h *LinkHandler) Redirect(c *gin.Context) {
-	// Extract short code from URL path
 	shortCode := c.Param("short_code")
-
-	// Edge case: Missing short code (user accesses "/")
 	if shortCode == "" {
 		c.Status(http.StatusNotFound)
 		return
 	}
 
-	// Resolve original URL via Service Layer
 	originalURL, err := h.Service.GetOriginalURL(shortCode)
 	if err != nil {
-		if err == service.ErrLinkNotFound {
+		if errors.Is(err, service.ErrLinkNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Short link not found"})
 			return
 		}
@@ -77,16 +62,33 @@ func (h *LinkHandler) Redirect(c *gin.Context) {
 		return
 	}
 
-	// Perform redirect (302 Found is recommended for shorteners)
 	c.Redirect(http.StatusFound, originalURL)
 }
 
-// GetLinkInfo handles GET /api/v1/links/:id
+// GetLinkInfo handles GET /api/v1/links/:id.
+// It retrieves metadata for a given short code without incrementing clicks.
 func (h *LinkHandler) GetLinkInfo(c *gin.Context) {
-	// Logic sẽ được bổ sung
+	shortCode := c.Param("id")
+
+	link, err := h.Service.GetLinkDetails(shortCode)
+	if err != nil {
+		if err == service.ErrLinkNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Link details not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal error retrieving link info"})
+		return
+	}
+	c.JSON(http.StatusOK, link)
 }
 
-// ListLinks handles GET /api/v1/links
+// ListLinks handles GET /api/v1/links.
+// It returns a list of all short links as response DTOs.
 func (h *LinkHandler) ListLinks(c *gin.Context) {
-	// Logic sẽ được bổ sung
+	links, err := h.Service.ListAllLinks()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal error retrieving link list"})
+		return
+	}
+	c.JSON(http.StatusOK, links)
 }

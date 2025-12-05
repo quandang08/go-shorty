@@ -12,10 +12,19 @@ import (
 
 // LinkService defines the URL-shortening business logic.
 type LinkService interface {
+	// CreateShortLink generates a short URL for the given original URL.
 	CreateShortLink(originalURL string) (*model.LinkResponse, error)
+
+	// GetOriginalURL returns the original URL mapped to a short code
+	// and increments its click count.
 	GetOriginalURL(shortCode string) (string, error)
-	GetLinkDetails(shortCode string) (*model.LinkResponse, error) // XEM CHI TIẾT
-	ListAllLinks() ([]model.LinkResponse, error)                  // LIỆT KÊ
+
+	// GetLinkDetails returns metadata for a short link without
+	// incrementing the click count.
+	GetLinkDetails(shortCode string) (*model.LinkResponse, error)
+
+	// ListAllLinks returns all short links as response DTOs.
+	ListAllLinks() ([]model.LinkResponse, error)
 }
 
 type linkServiceImpl struct {
@@ -23,6 +32,7 @@ type linkServiceImpl struct {
 	Cfg  *config.Config
 }
 
+// NewLinkService creates a new LinkService instance.
 func NewLinkService(repo repository.LinkRepository, cfg *config.Config) LinkService {
 	return &linkServiceImpl{Repo: repo, Cfg: cfg}
 }
@@ -35,10 +45,9 @@ var (
 	ErrServiceUnavailable = errors.New("service unavailable")
 )
 
-// CreateShortLink validates the URL, stores the record to obtain ID,
-// generates a Base62 short code, updates DB, and returns metadata.
+// CreateShortLink validates the URL, inserts a record to get the ID,
+// generates a Base62 short code, updates the database, and returns metadata.
 func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkResponse, error) {
-	// Validate URL
 	if originalURL == "" {
 		return nil, ErrInvalidURL
 	}
@@ -46,21 +55,16 @@ func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkRespon
 		return nil, ErrInvalidURL
 	}
 
-	// Insert to obtain auto-increment ID
 	link := &model.Link{OriginalURL: originalURL}
 	if err := s.Repo.Create(link); err != nil {
 		return nil, ErrServiceUnavailable
 	}
 
-	// Generate short code from ID
 	link.ShortCode = util.EncodeToBase62(link.ID)
-
-	// Update DB with generated short code
 	if err := s.Repo.UpdateShortCode(link); err != nil {
 		return nil, ErrServiceUnavailable
 	}
 
-	// Build final short URL
 	shortURL := s.Cfg.ShortDomain
 	if shortURL != "" && shortURL[len(shortURL)-1] != '/' {
 		shortURL += "/"
@@ -75,14 +79,13 @@ func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkRespon
 	}, nil
 }
 
-// GetOriginalURL finds the original URL mapped to the short code
-// and increments click count.
+// GetOriginalURL returns the original URL for a short code and
+// increments the click counter.
 func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
 	if shortCode == "" {
 		return "", ErrLinkNotFound
 	}
 
-	// Lookup
 	link, err := s.Repo.FindByShortCode(shortCode)
 	if err != nil {
 		return "", ErrServiceUnavailable
@@ -91,7 +94,6 @@ func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
 		return "", ErrLinkNotFound
 	}
 
-	// Increment counter
 	if err := s.Repo.IncrementClicks(shortCode); err != nil {
 		return "", ErrServiceUnavailable
 	}
@@ -99,7 +101,8 @@ func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
 	return link.OriginalURL, nil
 }
 
-// GetLinkDetails Implement GetLinkDetails (chỉ gọi FindByShortCode, không tăng click)
+// GetLinkDetails returns metadata for a short link without
+// incrementing the click count.
 func (s *linkServiceImpl) GetLinkDetails(shortCode string) (*model.LinkResponse, error) {
 	link, err := s.Repo.FindByShortCode(shortCode)
 	if err != nil {
@@ -108,7 +111,7 @@ func (s *linkServiceImpl) GetLinkDetails(shortCode string) (*model.LinkResponse,
 	if link == nil {
 		return nil, ErrLinkNotFound
 	}
-	// Map Entity sang Response DTO (Sử dụng code này để tránh trùng lặp)
+
 	return &model.LinkResponse{
 		ShortCode:   link.ShortCode,
 		OriginalURL: link.OriginalURL,
@@ -118,13 +121,14 @@ func (s *linkServiceImpl) GetLinkDetails(shortCode string) (*model.LinkResponse,
 	}, nil
 }
 
+// ListAllLinks retrieves all short links and maps them to response DTOs.
 func (s *linkServiceImpl) ListAllLinks() ([]model.LinkResponse, error) {
 	links, err := s.Repo.FindAll()
 	if err != nil {
 		return nil, ErrServiceUnavailable
 	}
-	// ... (logic map links sang responses DTO)
-	var responses []model.LinkResponse
+
+	responses := make([]model.LinkResponse, 0, len(links))
 	shortDomain := s.Cfg.ShortDomain
 	for _, link := range links {
 		responses = append(responses, model.LinkResponse{
