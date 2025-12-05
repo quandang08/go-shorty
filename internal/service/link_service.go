@@ -10,41 +10,33 @@ import (
 	"github.com/quandang08/go-shorty/internal/util"
 )
 
-// LinkService defines the business logic for creating and resolving short URLs.
+// LinkService defines the URL-shortening business logic.
 type LinkService interface {
-	// CreateShortLink generates a short code for the given URL and returns link metadata.
 	CreateShortLink(originalURL string) (*model.LinkResponse, error)
-
-	// GetOriginalURL returns the long URL mapped to the given short code.
 	GetOriginalURL(shortCode string) (string, error)
 }
 
-// linkServiceImpl implements LinkService.
 type linkServiceImpl struct {
 	Repo repository.LinkRepository
 	Cfg  *config.Config
 }
 
-// NewLinkService initializes and returns a LinkService instance.
 func NewLinkService(repo repository.LinkRepository, cfg *config.Config) LinkService {
-	return &linkServiceImpl{
-		Repo: repo,
-		Cfg:  cfg,
-	}
+	return &linkServiceImpl{Repo: repo, Cfg: cfg}
 }
 
-// Business errors returned by the service layer.
+// Business-level errors.
 var (
-	ErrInvalidURL         = errors.New("URL is invalid or empty")
+	ErrInvalidURL         = errors.New("invalid URL")
 	ErrLinkNotFound       = errors.New("short link not found")
-	ErrConflict           = errors.New("short code conflict occurred, please retry")
-	ErrServiceUnavailable = errors.New("internal service error")
+	ErrConflict           = errors.New("short code conflict")
+	ErrServiceUnavailable = errors.New("service unavailable")
 )
 
-// CreateShortLink validates the URL, generates a Base62 short code from the DB ID,
-// persists it, and returns the full response payload.
+// CreateShortLink validates the URL, stores the record to obtain ID,
+// generates a Base62 short code, updates DB, and returns metadata.
 func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkResponse, error) {
-	// Validate input
+	// Validate URL
 	if originalURL == "" {
 		return nil, ErrInvalidURL
 	}
@@ -52,24 +44,23 @@ func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkRespon
 		return nil, ErrInvalidURL
 	}
 
-	// Insert initial record to obtain auto-increment ID
+	// Insert to obtain auto-increment ID
 	link := &model.Link{OriginalURL: originalURL}
-	if err := s.Repo.Save(link); err != nil {
+	if err := s.Repo.Create(link); err != nil {
 		return nil, ErrServiceUnavailable
 	}
 
 	// Generate short code from ID
-	shortCode := util.EncodeToBase62(link.ID)
-	link.ShortCode = shortCode
+	link.ShortCode = util.EncodeToBase62(link.ID)
 
-	// Save short code back into database
-	if err := s.Repo.Save(link); err != nil {
+	// Update DB with generated short code
+	if err := s.Repo.UpdateShortCode(link); err != nil {
 		return nil, ErrServiceUnavailable
 	}
 
-	// Build short URL
+	// Build final short URL
 	shortURL := s.Cfg.ShortDomain
-	if len(shortURL) > 0 && shortURL[len(shortURL)-1] != '/' {
+	if shortURL != "" && shortURL[len(shortURL)-1] != '/' {
 		shortURL += "/"
 	}
 
@@ -82,14 +73,14 @@ func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkRespon
 	}, nil
 }
 
-// GetOriginalURL retrieves the original URL mapped to a short code
-// and increments the click counter.
+// GetOriginalURL finds the original URL mapped to the short code
+// and increments click count.
 func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
 	if shortCode == "" {
 		return "", ErrLinkNotFound
 	}
 
-	// Lookup link
+	// Lookup
 	link, err := s.Repo.FindByShortCode(shortCode)
 	if err != nil {
 		return "", ErrServiceUnavailable
@@ -98,7 +89,7 @@ func (s *linkServiceImpl) GetOriginalURL(shortCode string) (string, error) {
 		return "", ErrLinkNotFound
 	}
 
-	// Increment click count (repository should ensure atomic update)
+	// Increment counter
 	if err := s.Repo.IncrementClicks(shortCode); err != nil {
 		return "", ErrServiceUnavailable
 	}

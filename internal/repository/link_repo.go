@@ -7,49 +7,61 @@ import (
 	"gorm.io/gorm"
 )
 
-// LinkRepository defines methods to interact with the Link table in the database.
+// LinkRepository defines the DB operations for Link.
 type LinkRepository interface {
-	Save(link *model.Link) error
-
+	Create(link *model.Link) error
+	UpdateShortCode(link *model.Link) error
 	FindByShortCode(code string) (*model.Link, error)
-
 	IncrementClicks(code string) error
 }
 
-// linkRepositoryImpl is the concrete implementation of LinkRepository.
 type linkRepositoryImpl struct {
 	DB *gorm.DB
 }
 
-// NewLinkRepository creates a new instance of LinkRepository.
 func NewLinkRepository(db *gorm.DB) LinkRepository {
 	return &linkRepositoryImpl{DB: db}
 }
 
-// Save inserts a new link record into the database.
-func (l *linkRepositoryImpl) Save(link *model.Link) error {
-	if err := l.DB.Create(link).Error; err != nil {
-		return err
+// Create inserts a new Link record and populates its ID.
+func (r *linkRepositoryImpl) Create(link *model.Link) error {
+	return r.DB.Create(link).Error
+}
+
+// UpdateShortCode updates only the short_code column.
+func (r *linkRepositoryImpl) UpdateShortCode(link *model.Link) error {
+	result := r.DB.Model(&model.Link{}).
+		Where("id = ?", link.ID).
+		UpdateColumn("short_code", link.ShortCode)
+
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("record not found")
 	}
 	return nil
 }
 
-// FindByShortCode retrieves a link by its short code.
-func (l *linkRepositoryImpl) FindByShortCode(code string) (*model.Link, error) {
+// FindByShortCode retrieves a Link record by short code.
+func (r *linkRepositoryImpl) FindByShortCode(code string) (*model.Link, error) {
 	var link model.Link
-	if err := l.DB.Where("short_code = ?", code).First(&link).Error; err != nil {
+	err := r.DB.Where("short_code = ?", code).First(&link).Error
+
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // Not found
+			return nil, nil
 		}
 		return nil, err
 	}
+
 	return &link, nil
 }
 
-// IncrementClicks increases the click count of a link.
-func (l *linkRepositoryImpl) IncrementClicks(code string) error {
-	result := l.DB.Model(&model.Link{}).
+// IncrementClicks atomically increases the click counter.
+func (r *linkRepositoryImpl) IncrementClicks(code string) error {
+	return r.DB.Model(&model.Link{}).
 		Where("short_code = ?", code).
-		UpdateColumn("clicks", gorm.Expr("clicks + ?", 1))
-	return result.Error
+		UpdateColumn("clicks_count", gorm.Expr("clicks_count + ?", 1)).
+		Error
 }
