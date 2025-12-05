@@ -13,6 +13,7 @@ type LinkRepository interface {
 	UpdateShortCode(link *model.Link) error
 	FindByShortCode(code string) (*model.Link, error)
 	IncrementClicks(code string) error
+	FindAll() ([]model.Link, error)
 }
 
 type linkRepositoryImpl struct {
@@ -64,4 +65,13 @@ func (r *linkRepositoryImpl) IncrementClicks(code string) error {
 		Where("short_code = ?", code).
 		UpdateColumn("clicks_count", gorm.Expr("clicks_count + ?", 1)).
 		Error
+}
+
+// FindAll retrieves all link records.
+func (r *linkRepositoryImpl) FindAll() ([]model.Link, error) {
+	var links []model.Link
+	if result := r.DB.Find(&links); result.Error != nil {
+		return nil, result.Error
+	}
+	return links, nil
 }
