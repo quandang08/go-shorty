@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: shorty_user
+      DB_PASSWORD: shorty_pass
+      DB_NAME: shorty_db
+      PORT: 8080
+      SHORT_DOMAIN: http://localhost:8080/
+    depends_on:
+      - db
+    networks:
+      - go-shorty-network
+
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: shorty_user
+      POSTGRES_PASSWORD: shorty_pass
+      POSTGRES_DB: shorty_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - go-shorty-network
+
+networks:
+  go-shorty-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
