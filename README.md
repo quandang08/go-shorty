@@ -2,7 +2,7 @@
 
 ![version](https://img.shields.io/badge/version-1.0-blue)
 ![status](https://img.shields.io/badge/status-stable-brightgreen)
-![go](https://img.shields.io/badge/Go-1.22-%2300ADD8?logo=go)
+![go](https://img.shields.io/badge/Go-1.24-%2300ADD8?logo=go)
 ![postgres](https://img.shields.io/badge/PostgreSQL-16-%234169E1?logo=postgresql)
 ![architecture](https://img.shields.io/badge/Architecture-Clean%20Layered-orange)
 ![license](https://img.shields.io/badge/License-MIT-green)
