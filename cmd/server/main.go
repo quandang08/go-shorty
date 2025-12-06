@@ -30,6 +30,10 @@ func main() {
 	// Initialize Gin router.
 	router := gin.Default()
 
+	router.GET("/", func(c *gin.Context) {
+		c.String(200, "Welcome to GoShorty! Visit /api/v1/links to create short URLs.")
+	})
+
 	// Public redirect route: GET /:short_code
 	router.GET("/:short_code", linkHandler.Redirect)
 
