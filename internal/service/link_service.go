@@ -55,6 +55,11 @@ func (s *linkServiceImpl) CreateShortLink(originalURL string) (*model.LinkRespon
 		return nil, ErrInvalidURL
 	}
 
+	parsedURL, err := url.Parse(originalURL)
+	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		return nil, ErrInvalidURL
+	}
+
 	link := &model.Link{OriginalURL: originalURL}
 	if err := s.Repo.Create(link); err != nil {
 		return nil, ErrServiceUnavailable
