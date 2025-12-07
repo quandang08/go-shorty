@@ -13,35 +13,38 @@ Introduction – GoShorty v1.0
 
 Live Demo: https://go-shorty-production.up.railway.app/
 
-The Core Problem
-Modern applications require a reliable way to map long, complex URLs to concise identifiers. While third-party services (like Bit.ly) exist, they introduce external dependencies, latency risks, and lack of data ownership.
+# 1. Vấn đề Cốt lõi (The Core Problem)
 
-GoShorty is designed as a Self-hosted Backend Service to solve the URL shortening problem with a focus on High Availability and Strict Data Integrity.
+Các ứng dụng hiện đại cần một giải pháp tin cậy để chuyển đổi các URL dài và phức tạp thành các định danh ngắn gọn. Mặc dù các dịch vụ bên thứ ba (như Bit.ly) rất phổ biến, chúng đi kèm với rủi ro về phụ thuộc hạ tầng, độ trễ mạng (latency) và thiếu quyền kiểm soát dữ liệu.
 
-Key Engineering Decisions (Tư duy giải quyết vấn đề)
-Instead of just building a CRUD app, we focused on solving the specific technical constraints of a high-load system:
+GoShorty được xây dựng như một Backend Service tự vận hành (Self-hosted) để giải quyết bài toán rút gọn link với trọng tâm là Độ sẵn sàng cao (High Availability) và Tính toàn vẹn dữ liệu nghiêm ngặt (Strict Data Integrity).
 
-Guaranteed Uniqueness (Collision-Free):
+Các Quyết định Kỹ thuật Chính (Key Engineering Decisions)
+Thay vì chỉ xây dựng một ứng dụng CRUD đơn giản, chúng tôi tập trung giải quyết các ràng buộc kỹ thuật cụ thể của một hệ thống chịu tải cao:
 
-Challenge: Random string generation (e.g., MD5/UUID) requires expensive "check-and-retry" database queries to avoid duplicates.
+Đảm bảo Tính Duy nhất (Collision-Free):
 
-Solution: We use Base62 Encoding based on the database's BIGSERIAL ID. This mathematically guarantees uniqueness by design, eliminating collision checks and maximizing write performance.
+Thách thức: Việc sinh chuỗi ngẫu nhiên (như MD5/UUID) đòi hỏi phải truy vấn ngược vào DB để kiểm tra trùng lặp ("check-and-retry"), gây tốn kém tài nguyên và làm chậm hệ thống.
 
-Concurrency Safety (Analytics):
+Giải pháp: Sử dụng thuật toán Base62 Encoding dựa trên ID tự tăng (BIGSERIAL) của Database. Giải pháp toán học này đảm bảo tính duy nhất tuyệt đối theo thiết kế, loại bỏ hoàn toàn việc kiểm tra trùng lặp và tối đa hóa hiệu suất ghi.
 
-Challenge: Naive "read-modify-write" logic causes "lost updates" when multiple users click a link simultaneously (Race Condition).
+An toàn Đồng thời trong Thống kê (Concurrency Safety):
 
-Solution: We utilize Database-level Atomic Updates (UPDATE ... SET clicks = clicks + 1). This ensures 100% accuracy for analytics without complex application-level locking.
+Thách thức: Logic đếm click ngây thơ ("đọc-cộng-lưu") sẽ gây ra lỗi "mất dữ liệu" (lost updates) khi có hàng nghìn người dùng click cùng lúc (Race Condition).
 
-Performance vs. Reliability Trade-off:
+Giải pháp: Sử dụng cơ chế Atomic Updates ở cấp độ Database (UPDATE ... SET clicks = clicks + 1). Điều này đảm bảo độ chính xác 100% cho dữ liệu thống kê mà không cần dùng khóa (locking) phức tạp ở tầng ứng dụng Golang.
 
-Decision: We chose PostgreSQL over NoSQL.
+Đánh đổi: Hiệu năng vs. Độ tin cậy (Performance vs. Reliability):
 
-Reasoning: While NoSQL scales easier, the requirement for ACID compliance (to ensure no link is ever broken or click lost) was prioritized. The system is optimized for O(1) read speeds on the redirect path using Indexing.
+Quyết định: Chọn PostgreSQL thay vì NoSQL (MongoDB/Redis).
+
+Lý do: Mặc dù NoSQL mở rộng (scale) dễ hơn, nhưng yêu cầu về tuân thủ ACID (để đảm bảo tính nhất quán của dữ liệu quan trọng) được đặt lên hàng đầu. Hệ thống được tối ưu hóa cho tốc độ đọc O(1) trên luồng chuyển hướng (redirect path) bằng cách sử dụng Indexing hiệu quả.
 
 ---
 
 # 2. Architecture & Core System Design
+
+Hệ thống tuân thủ Kiến trúc Phân tầng (Clean Layered Architecture) để đảm bảo sự tách biệt trách nhiệm, dễ dàng bảo trì và mở rộng.
 
 <img width="1022" height="408" alt="Screenshot 2025-12-04 at 10 00 55" src="https://github.com/user-attachments/assets/33ebcab9-ddc2-4efc-8bfc-eaa12b5e52d4" />
 
@@ -152,7 +155,20 @@ Migration tự động bằng GORM
 
 ---
 
-## 4. API Flow
+# 3. Thách thức & Giải pháp (Challenges & Solutions)
+
+## A. Vấn đề "Duplicate Key" & Quy trình Lưu trữ
+  - Vấn đề: Khi triển khai luồng "2-Step Save" (Insert URL $\to$ Lấy ID $\to$ Update Mã ngắn), GORM gặp lỗi Duplicate Key do cố gắng Insert lại bản ghi đã có ID thay vì Update.
+  - Giải pháp: Tái cấu trúc tầng Repository để sử dụng các thao tác Tường minh (Explicit Operations). Thay thế hàm Save() chung chung bằng Create() (cho Insert) và UpdateShortCode() (sử dụng UpdateColumn chỉ cập nhật trường cần thiết).
+  - Kết quả: Đảm bảo quy trình lưu trữ an toàn, nguyên tử và không có lỗi xung đột.
+
+## B. Race Condition trong Thống kê (Analytics)
+  - Vấn đề: Logic "đọc-cộng-lưu" thông thường sẽ làm sai lệch số liệu click khi có nhiều người dùng truy cập cùng lúc.
+  - Giải pháp: Sử dụng Atomic Updates tại cấp độ Database (clicks = clicks + 1).
+  - Kết quả: Chuyển giao việc khóa (locking) cho PostgreSQL xử lý, đảm bảo chính xác 100% dữ liệu thống kê.
+---
+
+# 4. API Flow
 
 ### Create Short URL Flow
 <img width="767" height="282" alt="Screenshot 2025-12-04 at 18 35 23" src="https://github.com/user-attachments/assets/e7c7d60e-3f54-47d9-a363-f501ef6415a2" />
