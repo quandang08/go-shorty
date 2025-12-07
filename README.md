@@ -557,5 +557,43 @@ curl http://localhost:8080/api/v1/links
 
 > ⚠ Lưu ý: v1.0 là phiên bản đầu, tập trung vào **tính đúng đắn, atomic updates, O(1) redirect**, chưa tối ưu cho traffic cực lớn hay High Availability.
 
+
 ---
+
+<br><br><br>
+
+## Ideas / Coming Soon – GoShorty 2.0
+
+> “We’re not just shortening links. We’re redefining how people interact with URLs.” – GoShorty Vision
+
+### Smart Short Code Suggestions – Trải nghiệm mượt mà
+
+Trong thực tế, khi người dùng muốn tự nhập alias cho link của họ, thường gặp một vấn đề: nếu cơ sở dữ liệu có hàng triệu short code, việc nhập thủ công dễ dẫn tới **trùng lặp liên tục**. Hệ thống sẽ buộc người dùng thử đi thử lại, gây **mất thời gian, khó chịu và trải nghiệm tệ**.
+
+GoShorty 2.0 giải quyết vấn đề này một cách thông minh. Hệ thống sẽ **hiểu ý định của người dùng**, gợi ý các lựa chọn khả thi, nhanh chóng và an toàn. Người dùng vẫn chủ động nhập alias, nhưng không còn phải thử đi thử lại nhiều lần nữa.
+
+> Chi tiết thuật toán? Chỉ GoShorty biết.
+> Trải nghiệm sẽ nói lên tất cả.
+
+---
+
+### Structured Short Codes – Bảo mật tinh tế
+
+Cho phép người dùng nhập short_code thủ công mở ra rủi ro: SQL Injection, XSS, brute-force… GoShorty 2.0 nói: **“Bạn đặt tên, chúng tôi bảo vệ.”**
+
+Lấy cảm hứng từ JWT (header–payload–signature), short_code được **thiết kế có cấu trúc riêng**, vừa bảo vệ hệ thống vừa vẫn **ngắn gọn và dễ nhớ**.
+
+Cách cấu trúc và thuật toán tối giản như thế nào… đó là một bí mật. Người dùng sẽ cảm nhận hiệu quả bảo vệ ngay từ trải nghiệm, nhưng **chi tiết chỉ GoShorty mới biết**.
+
+---
+
+<br>
+
+Coming Soon – GoShorty 2.0
+
+<br>
+
+**Author:** CodeWithAmu  
+**GitHub:** [https://github.com/CodeWithAmu](https://github.com/CodeWithAmu)  
+**Made with ❤️ using Golang.**
 
