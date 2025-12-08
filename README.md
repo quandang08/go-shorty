@@ -29,23 +29,30 @@ Live Demo: https://go-shorty-production.up.railway.app/
 
 ---
 
-# 1. Mô tả bài toán (Problem Description)
+# **1. Mô tả bài toán (Problem Description)**
 
-Các ứng dụng hiện đại cần chuyển đổi URL dài, phức tạp thành định danh ngắn gọn. Các thách thức kỹ thuật bao gồm:
+Bài toán đặt ra là xây dựng một hệ thống rút gọn URL, cho phép người dùng biến một đường dẫn dài và khó chia sẻ thành một mã ngắn gọn, dễ ghi nhớ. Khi người dùng truy cập vào đường dẫn ngắn này, hệ thống phải lập tức chuyển hướng (redirect) về URL gốc và có thể ghi nhận số lượt truy cập để phục vụ thống kê.
 
-- **Tính duy nhất của short code:**  
-  Phải đảm bảo không trùng lặp, tránh check-and-retry tốn tài nguyên.
+Về cơ chế hoạt động, hệ thống cần thực hiện ba bước chính:
 
-- **Click counter an toàn:**  
-  Phải đếm click chính xác khi nhiều người dùng truy cập cùng lúc.
+1. **Nhận URL gốc từ người dùng** và kiểm tra tính hợp lệ.
+2. **Sinh ra một short code duy nhất**, có độ dài ngắn và phù hợp để gắn vào domain rút gọn.
+3. **Lưu short code – URL gốc vào cơ sở dữ liệu**, đồng thời xử lý chuyển hướng khi người dùng truy cập short link.
 
-- **Tối ưu hiệu năng đọc:**  
-  Luồng redirect cần nhanh, tránh bottleneck DB.
+Để sinh short code, phương pháp phù hợp nhất là **mã hoá ID bằng Base62** (chứa 0–9, a–z, A–Z). Base62 được dùng vì:
 
-> ⚠ GoShorty v1.0: single instance, atomic updates row-level, traffic nhỏ/medium, chưa High Availability.
+* Cho phép tạo short code **ngắn nhất có thể** cho một số nguyên tự tăng (1 → “1”, 61 → “Z”, 62 → “10”).
+* **Độ dài mã tăng chậm**, nên hàng triệu link vẫn chỉ dài 5–6 ký tự.
+* **Không cần random**, tránh được bài toán trùng lặp.
+* **Nhanh và đơn giản**, dễ kiểm soát hơn so với hash hoặc UUID.
+
+Kết luận, bài toán yêu cầu một quy trình rút gọn URL đúng – nhanh – dễ mở rộng, trong đó trọng tâm là:
+
+* cơ chế encode/decode bằng Base62,
+* một bảng ánh xạ short code → URL gốc,
+* và luồng redirect đơn giản nhưng tối ưu cho tốc độ.
 
 ---
-
 
 # 2. Architecture & Core System Design (GoShorty v1.0)
 
