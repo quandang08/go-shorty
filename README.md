@@ -340,23 +340,20 @@ GoShorty v1.0 tuân thủ **Clean Layered Architecture**, tách biệt rõ ràng
 
 ### 7.1 Limitations (Nhược điểm v1.0)
 
-* **Single instance:**
-  ACID chỉ đảm bảo trong phạm vi một PostgreSQL instance duy nhất; chưa hỗ trợ multi-node replication → chưa High Availability.
+* **Concurrency / Race conditions:**
+  Khi 2 request cùng lúc tạo link với cùng URL, v1.0 chưa xử lý triệt để trường hợp trùng lặp; có thể dẫn tới duplicate short code nếu transaction không được wrap cẩn thận.
 
-* **Traffic nhỏ/medium:**
-  Atomic row-level update cho click counter hoạt động tốt, nhưng chưa tối ưu cho hàng triệu request/giây hoặc multi-instance.
+* **URL Validation & Edge Cases:**
+  Hiện tại chưa kiểm tra triệt để format URL. Ví dụ: URL rỗng, thiếu schema (`http://`/`https://`), hay URL chứa ký tự đặc biệt vẫn có thể được lưu.
 
-* **No caching layer:**
-  Luồng redirect vẫn query trực tiếp DB → có thể trở thành bottleneck khi link hot.
+* **Database Performance:**
+  Với cơ sở dữ liệu >1 triệu links, các query chưa được tối ưu (chưa có index cho `OriginalURL` hay `ShortCode`). Truy vấn trực tiếp DB cho redirect có thể chậm nếu link hot.
 
-* **2-step Create URL:**
-  Quy trình Insert + Update short code chưa wrap transaction → có thể không hoàn toàn atomic nếu gặp lỗi giữa các bước.
+* **Security Considerations:**
+  v1.0 chưa kiểm soát các rủi ro: SQL Injection, XSS, brute-force short code guessing. Những biện pháp bảo mật nâng cao sẽ được triển khai ở các phiên bản sau.
 
-* **No comprehensive tests:**
-  Chưa có đầy đủ unit & integration tests; error handling chỉ cover single instance, chưa đảm bảo cho edge cases.
-
-* **Duplicate URLs:**
-  Hiện tại, system cho phép cùng một original URL tạo nhiều short code → có thể dẫn đến duplicate entry nếu muốn tránh trùng.
+* **Scalability:**
+  Hệ thống hiện chỉ phù hợp traffic nhỏ/medium. Nếu traffic tăng đột biến 50–100x, single instance sẽ trở thành bottleneck; chưa có kế hoạch horizontal scaling cho v1.0.
 
 ---
 
