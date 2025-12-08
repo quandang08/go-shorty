@@ -31,7 +31,16 @@ func main() {
 	router := gin.Default()
 
 	router.GET("/", func(c *gin.Context) {
-		c.String(200, "Welcome to GoShorty! Visit /api/v1/links to create short URLs.")
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(200, `
+		<h1>Welcome to GoShorty!</h1>
+		<p>Enter a URL to shorten:</p>
+		<form action="/api/v1/links" method="POST">
+			<input type="url" name="original_url" placeholder="https://example.com" required style="width:300px">
+			<button type="submit">Shorten</button>
+		</form>
+		<p>Or visit <a href="/api/v1/links">/api/v1/links</a> to see the list of short URLs (GET).</p>
+	`)
 	})
 
 	// Public redirect route: GET /:short_code
