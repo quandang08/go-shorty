@@ -487,7 +487,14 @@ Truy cập trình duyệt:
 http://localhost:8080/1
 ```
 
-→ Chuyển hướng đến URL gốc (HTTP 302 Found).
+**Lưu ý khi test bằng Postman / cURL:**
+
+* Mặc định Postman **follow redirects tự động**, nên bạn sẽ thấy **HTTP 200 OK** từ URL đích.
+* Để kiểm tra chính xác HTTP 302 từ server:
+
+  * Vào **Settings → Enable "Automatically follow redirects" → OFF** trong Postman
+  * Gửi request lại → sẽ thấy **HTTP 302 Found** từ GoShorty.
+
 
 #### C. Get Link Analytics
 
