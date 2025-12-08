@@ -24,7 +24,7 @@ func NewLinkHandler(svc service.LinkService) *LinkHandler {
 // and returns the result or an error response.
 func (h *LinkHandler) CreateLink(c *gin.Context) {
 	var req model.CreateLinkRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input format or missing fields"})
 		return
 	}
