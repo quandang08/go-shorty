@@ -596,6 +596,6 @@ Coming Soon – GoShorty 2.0
 <br>
 
 **Author:** CodeWithAmu  
-**GitHub:** [https://github.com/CodeWithAmu](https://github.com/CodeWithAmu)  
+**GitHub:** [https://github.com/quandang08](https://github.com/quandang08)
 **Made with ❤️ using Golang.**
 
