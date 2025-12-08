@@ -360,27 +360,29 @@ GoShorty v1.0 tuân thủ **Clean Layered Architecture**, tách biệt rõ ràng
 
 ---
 
-### 7.2 Future Improvements (Kế hoạch cải tiến)
+### 7.2 Future Improvements – v1.1
 
-* **Redis Caching Layer:**
-  Caching hot path (GET /:code) để giảm load DB, tăng tốc độ redirect, giảm latency xuống gần bằng 0 cho link hot.
+Các cải tiến này tập trung vào việc **khắc phục những hạn chế còn tồn tại của v1.0**, có thể triển khai trong thời gian ngắn (ví dụ 2–3 ngày):
 
-* **Containerization (Docker/Kubernetes):**
-  Triển khai dễ dàng, thuận lợi cho horizontal scaling multi-instance trong môi trường production.
+* **Atomic Create URL:**
+  Wrap quy trình Insert + Update short code trong transaction để đảm bảo **tính toàn vẹn** tuyệt đối.
 
-* **Observability & Metrics:**
-  Tích hợp Prometheus + Grafana để monitor key metrics: redirect latency, DB queries, click volume, phát hiện bottleneck sớm.
+* **Duplicate URL Handling:**
+  Kiểm tra duplicate original URL trước khi tạo short code để tránh việc cùng một URL có nhiều short code không cần thiết.
 
-* **Unit & Integration Testing:**
-  Bổ sung coverage cho Service & Repository layers, đảm bảo code reliability và prevent regressions khi mở rộng tính năng.
+* **Basic Caching (Optional):**
+  Thêm cache tạm thời cho redirect hot path để giảm query DB, tăng tốc độ cho các link được truy cập nhiều.
 
-* **Transactional improvements:**
-  Wrap 2-step Create URL trong transaction để đảm bảo **atomicity tuyệt đối**.
+* **Improved Error Handling & Logging:**
+  Bổ sung logging chi tiết hơn, handle edge cases, tránh silent failure trong các API.
 
-* **Optional URL Deduplication:**
-  Cho phép kiểm tra duplicate URL trước khi tạo short code, nếu muốn tránh tạo nhiều short code cho cùng một original URL.
+* **Unit & Integration Testing (Minimal):**
+  Viết thêm một số test đơn giản cho service & repository để đảm bảo các chức năng cơ bản hoạt động ổn định.
+
+> ⚠ Mục tiêu v1.1: sửa những thiếu sót nhỏ, nâng tính ổn định và trải nghiệm người dùng, **không thêm tính năng mới lớn hay thay đổi kiến trúc**.
 
 ---
+
 ## 8. Folder Structure
 
 Cấu trúc thư mục GoShorty v1.0 được tổ chức theo **Clean Layered Architecture**, dễ hiểu và dễ bảo trì:
