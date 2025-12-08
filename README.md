@@ -376,6 +376,19 @@ Các cải tiến này tập trung vào việc **khắc phục những hạn ch�
 * **Unit & Integration Testing (Minimal):**
   Viết thêm một số test đơn giản cho service & repository để đảm bảo các chức năng cơ bản hoạt động ổn định.
 
+* Những tính năng sẽ được bổ sung trong v1.1:
+  - Custom Alias (short code tự đặt):
+    - Cho phép user gửi lên original_url + custom_alias.
+    - Nếu alias đã tồn tại → trả về 409 Conflict.
+    - Nếu hợp lệ → tạo short link theo đúng alias người dùng yêu cầu.
+
+  - Expiration (link hết hạn):
+    - Cho phép người dùng tạo link có thời hạn:
+      -	expires_at (ISO string)
+    - Khi hết hạn:
+      - Redirect không thực hiện
+      - Trả về HTTP 410 Gone
+
 > ⚠ Mục tiêu v1.1: sửa những thiếu sót nhỏ, nâng tính ổn định và trải nghiệm người dùng, **không thêm tính năng mới lớn hay thay đổi kiến trúc**.
 
 ---
