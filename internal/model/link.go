@@ -14,7 +14,7 @@ type Link struct {
 // CreateLinkRequest is the input payload sent by the client when requesting
 // a new shortened link.
 type CreateLinkRequest struct {
-	OriginalURL string `json:"original_url" binding:"required"`
+	OriginalURL string `json:"original_url" form:"original_url" binding:"required"`
 }
 
 // LinkResponse represents the response payload returned to the client

@@ -31,7 +31,7 @@ func (h *LinkHandler) CreateLink(c *gin.Context) {
 
 	response, err := h.Service.CreateShortLink(req.OriginalURL)
 	if err != nil {
-		if err == service.ErrInvalidURL {
+		if errors.Is(err, service.ErrInvalidURL) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "The provided URL is invalid or malformed."})
 			return
 		}
@@ -72,7 +72,7 @@ func (h *LinkHandler) GetLinkInfo(c *gin.Context) {
 
 	link, err := h.Service.GetLinkDetails(shortCode)
 	if err != nil {
-		if err == service.ErrLinkNotFound {
+		if errors.Is(err, service.ErrLinkNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Link details not found"})
 			return
 		}
